@@ -85,6 +85,7 @@ func newTemplateCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 			client.ClientOnly = !validate
 			client.APIVersions = chartutil.VersionSet(extraAPIs)
 			client.IncludeCRDs = includeCrds
+			client.Version = chartVersion
 			rel, err := runInstall(args, client, valueOpts, out)
 
 			if err != nil && !settings.Debug {
@@ -193,6 +194,7 @@ func newTemplateCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 	f.StringVar(&kubeVersion, "kube-version", "", "Kubernetes version used for Capabilities.KubeVersion")
 	f.StringSliceVarP(&extraAPIs, "api-versions", "a", []string{}, "Kubernetes api versions used for Capabilities.APIVersions")
 	f.BoolVar(&client.UseReleaseName, "release-name", false, "use release name in the output-dir path.")
+	f.StringVar(&chartVersion, "chart-version", "", "set the version on the chart to this semver version")
 	bindPostRenderFlag(cmd, &client.PostRenderer)
 
 	return cmd
@@ -239,7 +241,7 @@ func writeToFile(outputDir string, name string, data string, append bool) error 
 
 func createOrOpenFile(filename string, append bool) (*os.File, error) {
 	if append {
-		return os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0600)
+		return os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0o600)
 	}
 	return os.Create(filename)
 }
@@ -251,5 +253,7 @@ func ensureDirectoryForFile(file string) error {
 		return err
 	}
 
-	return os.MkdirAll(baseDir, 0755)
+	return os.MkdirAll(baseDir, 0o755)
 }
+
+var chartVersion string

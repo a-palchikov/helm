@@ -60,7 +60,7 @@ import (
 // since there can be filepath in front of it.
 const notesFileSuffix = "NOTES.txt"
 
-const defaultDirectoryPermission = 0755
+const defaultDirectoryPermission = 0o755
 
 // Install performs an installation operation.
 type Install struct {
@@ -68,10 +68,12 @@ type Install struct {
 
 	ChartPathOptions
 
-	ClientOnly               bool
-	Force                    bool
-	CreateNamespace          bool
-	DryRun                   bool
+	ClientOnly      bool
+	Force           bool
+	CreateNamespace bool
+	DryRun          bool
+	// Custom version of the chart to render
+	Version                  string
 	DisableHooks             bool
 	Replace                  bool
 	Wait                     bool
@@ -357,12 +359,11 @@ func (i *Install) RunWithContext(ctx context.Context, chrt *chart.Chart, vals ma
 	go i.performInstall(rChan, rel, toBeAdopted, resources)
 	go i.handleContext(ctx, rChan, doneChan, rel)
 	result := <-rChan
-	//start preformInstall go routine
+	// start preformInstall go routine
 	return result.r, result.e
 }
 
 func (i *Install) performInstall(c chan<- resultMessage, rel *release.Release, toBeAdopted kube.ResourceList, resources kube.ResourceList) {
-
 	// pre-install hooks
 	if !i.DisableHooks {
 		if err := i.cfg.execHook(rel, release.HookPreInstall, i.Timeout); err != nil {
@@ -426,6 +427,7 @@ func (i *Install) performInstall(c chan<- resultMessage, rel *release.Release, t
 
 	i.reportToRun(c, rel, nil)
 }
+
 func (i *Install) handleContext(ctx context.Context, c chan<- resultMessage, done chan struct{}, rel *release.Release) {
 	select {
 	case <-ctx.Done():
@@ -435,6 +437,7 @@ func (i *Install) handleContext(ctx context.Context, c chan<- resultMessage, don
 		return
 	}
 }
+
 func (i *Install) reportToRun(c chan<- resultMessage, rel *release.Release, err error) {
 	i.Lock.Lock()
 	if err != nil {
@@ -443,6 +446,7 @@ func (i *Install) reportToRun(c chan<- resultMessage, rel *release.Release, err 
 	c <- resultMessage{r: rel, e: err}
 	i.Lock.Unlock()
 }
+
 func (i *Install) failRelease(rel *release.Release, err error) (*release.Release, error) {
 	rel.SetStatus(release.StatusFailed, fmt.Sprintf("Release %q failed: %s", i.ReleaseName, err.Error()))
 	if i.Atomic {
@@ -569,7 +573,7 @@ func writeToFile(outputDir string, name string, data string, append bool) error 
 
 func createOrOpenFile(filename string, append bool) (*os.File, error) {
 	if append {
-		return os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0600)
+		return os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0o600)
 	}
 	return os.Create(filename)
 }
@@ -756,7 +760,7 @@ func (c *ChartPathOptions) LocateChart(name string, settings *cli.EnvSettings) (
 		dl.Options = append(dl.Options, getter.WithBasicAuth(c.Username, c.Password))
 	}
 
-	if err := os.MkdirAll(settings.RepositoryCache, 0755); err != nil {
+	if err := os.MkdirAll(settings.RepositoryCache, 0o755); err != nil {
 		return "", err
 	}
 

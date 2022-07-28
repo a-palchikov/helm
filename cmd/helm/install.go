@@ -190,7 +190,6 @@ func addInstallFlags(cmd *cobra.Command, f *pflag.FlagSet, client *action.Instal
 		}
 		return compVersionFlag(args[requiredArgs-1], toComplete)
 	})
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -226,6 +225,10 @@ func runInstall(args []string, client *action.Install, valueOpts *values.Options
 	chartRequested, err := loader.Load(cp)
 	if err != nil {
 		return nil, err
+	}
+
+	if client.DryRun && client.Version != "" {
+		chartRequested.Metadata.Version = client.Version
 	}
 
 	if err := checkIfInstallable(chartRequested); err != nil {
