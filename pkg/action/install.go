@@ -61,7 +61,7 @@ import (
 // since there can be filepath in front of it.
 const notesFileSuffix = "NOTES.txt"
 
-const defaultDirectoryPermission = 0755
+const defaultDirectoryPermission = 0o755
 
 // Install performs an installation operation.
 type Install struct {
@@ -74,6 +74,8 @@ type Install struct {
 	CreateNamespace bool
 	DryRun          bool
 	DryRunOption    string
+	// Custom version of the chart to render
+	Version                  string
 	// HideSecret can be set to true when DryRun is enabled in order to hide
 	// Kubernetes Secrets in the output. It cannot be used outside of DryRun.
 	HideSecret               bool
@@ -626,7 +628,7 @@ func writeToFile(outputDir string, name string, data string, append bool) error 
 
 func createOrOpenFile(filename string, append bool) (*os.File, error) {
 	if append {
-		return os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0600)
+		return os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0o600)
 	}
 	return os.Create(filename)
 }
@@ -815,7 +817,7 @@ func (c *ChartPathOptions) LocateChart(name string, settings *cli.EnvSettings) (
 		dl.Options = append(dl.Options, getter.WithBasicAuth(c.Username, c.Password))
 	}
 
-	if err := os.MkdirAll(settings.RepositoryCache, 0755); err != nil {
+	if err := os.MkdirAll(settings.RepositoryCache, 0o755); err != nil {
 		return "", err
 	}
 
