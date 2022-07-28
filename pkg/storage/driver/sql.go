@@ -328,7 +328,7 @@ func (s *SQL) Get(key string) (release.Releaser, error) {
 		return nil, err
 	}
 
-	if release.Labels, err = s.getReleaseCustomLabels(key, s.namespace); err != nil {
+	if release.Labels, err = s.getReleaseCustomLabels(key); err != nil {
 		s.Logger().Debug(
 			"failed to get release custom labels",
 			slog.String("namespace", s.namespace),
@@ -373,7 +373,7 @@ func (s *SQL) List(filter func(release.Releaser) bool) ([]release.Releaser, erro
 			continue
 		}
 
-		if release.Labels, err = s.getReleaseCustomLabels(record.Key, record.Namespace); err != nil {
+		if release.Labels, err = s.getReleaseCustomLabels(record.Key); err != nil {
 			s.Logger().Debug(
 				"failed to get release custom labels",
 				slog.String("namespace", record.Namespace),
@@ -442,7 +442,7 @@ func (s *SQL) Query(labels map[string]string) ([]release.Releaser, error) {
 			continue
 		}
 
-		if release.Labels, err = s.getReleaseCustomLabels(record.Key, record.Namespace); err != nil {
+		if release.Labels, err = s.getReleaseCustomLabels(record.Key); err != nil {
 			s.Logger().Debug(
 				"failed to get release custom labels",
 				slog.String("namespace", record.Namespace),
@@ -667,7 +667,7 @@ func (s *SQL) Delete(key string) (release.Releaser, error) {
 		return release, err
 	}
 
-	if release.Labels, err = s.getReleaseCustomLabels(key, s.namespace); err != nil {
+	if release.Labels, err = s.getReleaseCustomLabels(key); err != nil {
 		s.Logger().Debug(
 			"failed to get release custom labels",
 			slog.String("namespace", s.namespace),
@@ -691,7 +691,7 @@ func (s *SQL) Delete(key string) (release.Releaser, error) {
 }
 
 // Get release custom labels from database
-func (s *SQL) getReleaseCustomLabels(key string, _ string) (map[string]string, error) {
+func (s *SQL) getReleaseCustomLabels(key string) (map[string]string, error) {
 	query, args, err := s.statementBuilder.
 		Select(sqlCustomLabelsTableKeyColumn, sqlCustomLabelsTableValueColumn).
 		From(sqlCustomLabelsTableName).

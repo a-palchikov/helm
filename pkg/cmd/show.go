@@ -226,8 +226,7 @@ func runShow(args []string, client *action.Show) (string, error) {
 }
 
 func addRegistryClient(out io.Writer, client *action.Show) error {
-	registryClient, err := newRegistryClient(out, client.CertFile, client.KeyFile, client.CaFile,
-		client.InsecureSkipTLSVerify, client.PlainHTTP, client.Username, client.Password)
+	registryClient, err := client.RegistryConfiguration.NewClient(out)
 	if err != nil {
 		return fmt.Errorf("missing registry client: %w", err)
 	}

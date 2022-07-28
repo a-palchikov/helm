@@ -75,7 +75,7 @@ func Crds(linter *support.Linter) {
 
 			// If YAML parsing fails here, it will always fail in the next block as well, so we should return here.
 			// This also confirms the YAML is not a template, since templates can't be decoded into a K8sYamlStruct.
-			if !linter.RunLinterRule(support.ErrorSev, fpath, validateYamlContent(err)) {
+			if !linter.RunLinterRule(support.ErrorSev, fpath, validateYamlContent(bytes.NewReader(crd.File.Data), err)) {
 				return
 			}
 

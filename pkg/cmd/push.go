@@ -35,17 +35,11 @@ it will also be uploaded.
 `
 
 type registryPushOptions struct {
-	certFile              string
-	keyFile               string
-	caFile                string
-	insecureSkipTLSVerify bool
-	plainHTTP             bool
-	password              string
-	username              string
+	cfg action.RegistryConfiguration
 }
 
 func newPushCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
-	o := &registryPushOptions{}
+	o := &registryPushOptions{cfg: cfg.RegistryConfig}
 
 	cmd := &cobra.Command{
 		Use:   "push [chart] [remote]",
@@ -69,22 +63,25 @@ func newPushCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 			}
 			return noMoreArgsComp()
 		},
-		RunE: func(_ *cobra.Command, args []string) error {
-			registryClient, err := newRegistryClient(
-				out, o.certFile, o.keyFile, o.caFile, o.insecureSkipTLSVerify, o.plainHTTP, o.username, o.password,
-			)
-
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if !cmd.Flags().Changed("plain-http") && cfg.RegistryConfig.PlainHTTP {
+				// Override with configuration from environment
+				o.cfg.PlainHTTP = true
+			}
+			registryClient, err := o.cfg.NewClient(out)
 			if err != nil {
 				return fmt.Errorf("missing registry client: %w", err)
 			}
 			cfg.RegistryClient = registryClient
 			chartRef := args[0]
 			remote := args[1]
-			client := action.NewPushWithOpts(action.WithPushConfig(cfg),
-				action.WithTLSClientConfig(o.certFile, o.keyFile, o.caFile),
-				action.WithInsecureSkipTLSVerify(o.insecureSkipTLSVerify),
-				action.WithPlainHTTP(o.plainHTTP),
-				action.WithPushOptWriter(out))
+			client := action.NewPushWithOpts(
+				action.WithPushConfig(cfg),
+				action.WithTLSClientConfig(o.cfg.CertFile, o.cfg.KeyFile, o.cfg.CaFile),
+				action.WithInsecureSkipTLSVerify(o.cfg.InsecureSkipTLSVerify),
+				action.WithPlainHTTP(o.cfg.PlainHTTP),
+				action.WithPushOptWriter(out),
+			)
 			client.Settings = settings
 			output, err := client.Run(chartRef, remote)
 			if err != nil {
@@ -96,13 +93,13 @@ func newPushCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&o.certFile, "cert-file", "", "identify registry client using this SSL certificate file")
-	f.StringVar(&o.keyFile, "key-file", "", "identify registry client using this SSL key file")
-	f.StringVar(&o.caFile, "ca-file", "", "verify certificates of HTTPS-enabled servers using this CA bundle")
-	f.BoolVar(&o.insecureSkipTLSVerify, "insecure-skip-tls-verify", false, "skip tls certificate checks for the chart upload")
-	f.BoolVar(&o.plainHTTP, "plain-http", false, "use insecure HTTP connections for the chart upload")
-	f.StringVar(&o.username, "username", "", "chart repository username where to locate the requested chart")
-	f.StringVar(&o.password, "password", "", "chart repository password where to locate the requested chart")
+	f.StringVar(&o.cfg.CertFile, "cert-file", "", "identify registry client using this SSL certificate file")
+	f.StringVar(&o.cfg.KeyFile, "key-file", "", "identify registry client using this SSL key file")
+	f.StringVar(&o.cfg.CaFile, "ca-file", "", "verify certificates of HTTPS-enabled servers using this CA bundle")
+	f.BoolVar(&o.cfg.InsecureSkipTLSVerify, "insecure-skip-tls-verify", false, "skip tls certificate checks for the chart upload")
+	f.BoolVar(&o.cfg.PlainHTTP, "plain-http", false, "use insecure HTTP connections for the chart upload")
+	f.StringVar(&o.cfg.Username, "username", "", "chart repository username where to locate the requested chart")
+	f.StringVar(&o.cfg.Password, "password", "", "chart repository password where to locate the requested chart")
 
 	return cmd
 }

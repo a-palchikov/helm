@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -31,8 +32,9 @@ import (
 	"github.com/spf13/pflag"
 
 	"helm.sh/helm/v4/pkg/action"
-	"helm.sh/helm/v4/pkg/chart"
+	ci "helm.sh/helm/v4/pkg/chart"
 	"helm.sh/helm/v4/pkg/chart/loader"
+	chart "helm.sh/helm/v4/pkg/chart/v2"
 	"helm.sh/helm/v4/pkg/cli/output"
 	"helm.sh/helm/v4/pkg/cli/values"
 	"helm.sh/helm/v4/pkg/cmd/require"
@@ -143,8 +145,7 @@ func newInstallCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 			return compInstall(args, toComplete, client)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			registryClient, err := newRegistryClient(out, client.CertFile, client.KeyFile, client.CaFile,
-				client.InsecureSkipTLSVerify, client.PlainHTTP, client.Username, client.Password)
+			registryClient, err := client.RegistryConfiguration.NewClient(out)
 			if err != nil {
 				return fmt.Errorf("missing registry client: %w", err)
 			}
@@ -283,7 +284,21 @@ func runInstall(args []string, client *action.Install, valueOpts *values.Options
 		return nil, err
 	}
 
-	ac, err := chart.NewAccessor(chartRequested)
+	var ch *chart.Chart
+	switch c := chartRequested.(type) {
+	case *chart.Chart:
+		ch = c
+	case chart.Chart:
+		ch = &c
+	default:
+		return nil, errors.New("invalid chart apiVersion")
+	}
+
+	if client.DryRunStrategy != action.DryRunNone && client.Version != "" {
+		ch.Metadata.Version = client.Version
+	}
+
+	ac, err := ci.NewAccessor(chartRequested)
 	if err != nil {
 		return nil, err
 	}
@@ -355,7 +370,7 @@ func runInstall(args []string, client *action.Install, valueOpts *values.Options
 // checkIfInstallable validates if a chart can be installed
 //
 // Application chart type is only installable
-func checkIfInstallable(ch chart.Accessor) error {
+func checkIfInstallable(ch ci.Accessor) error {
 	meta := ch.MetadataAsMap()
 
 	switch meta["Type"] {

@@ -106,7 +106,7 @@ func filterSystemLabels(lbs map[string]string) map[string]string {
 	return result
 }
 
-// Checks if labels array contains system labels
+// ContainsSystemLabels checks if labels array contains system labels
 func ContainsSystemLabels(lbs map[string]string) bool {
 	for k := range lbs {
 		if isSystemLabel(k) {

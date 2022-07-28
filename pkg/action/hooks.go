@@ -22,12 +22,10 @@ import (
 	"slices"
 	"sort"
 	"time"
-
-	"helm.sh/helm/v4/pkg/kube"
-
 	"go.yaml.in/yaml/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"helm.sh/helm/v4/pkg/kube"
 	release "helm.sh/helm/v4/pkg/release/v1"
 )
 

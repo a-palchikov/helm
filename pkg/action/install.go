@@ -89,6 +89,8 @@ type Install struct {
 	CreateNamespace bool
 	// DryRunStrategy can be set to prepare, but not execute the operation and whether or not to interact with the remote cluster
 	DryRunStrategy DryRunStrategy
+	// Custom version of the chart to render
+	Version string
 	// HideSecret can be set to true when DryRun is enabled in order to hide
 	// Kubernetes Secrets in the output. It cannot be used outside of DryRun.
 	HideSecret       bool
@@ -141,18 +143,13 @@ type Install struct {
 
 // ChartPathOptions captures common options used for controlling chart paths
 type ChartPathOptions struct {
-	CaFile                string // --ca-file
-	CertFile              string // --cert-file
-	KeyFile               string // --key-file
-	InsecureSkipTLSVerify bool   // --insecure-skip-verify
-	PlainHTTP             bool   // --plain-http
-	Keyring               string // --keyring
-	Password              string // --password
-	PassCredentialsAll    bool   // --pass-credentials
-	RepoURL               string // --repo
-	Username              string // --username
-	Verify                bool   // --verify
-	Version               string // --version
+	RegistryConfiguration
+
+	Keyring            string // --keyring
+	PassCredentialsAll bool   // --pass-credentials
+	RepoURL            string // --repo
+	Verify             bool   // --verify
+	Version            string // --version
 
 	// registryClient provides a registry client but is not added with
 	// options from a flag
@@ -887,22 +884,22 @@ func urlEqual(u1, u2 *url.URL) bool {
 // - URL
 //
 // If 'verify' was set on ChartPathOptions, this will attempt to also verify the chart.
-func (c *ChartPathOptions) LocateChart(name string, settings *cli.EnvSettings) (string, error) {
-	if registry.IsOCI(name) && c.registryClient == nil {
+func (r *ChartPathOptions) LocateChart(name string, settings *cli.EnvSettings) (string, error) {
+	if registry.IsOCI(name) && r.registryClient == nil {
 		return "", fmt.Errorf("unable to lookup chart %q, missing registry client", name)
 	}
 
 	name = strings.TrimSpace(name)
-	version := strings.TrimSpace(c.Version)
+	version := strings.TrimSpace(r.Version)
 
-	if c.RepoURL == "" {
+	if r.RepoURL == "" {
 		if _, err := os.Stat(name); err == nil {
 			abs, err := filepath.Abs(name)
 			if err != nil {
 				return abs, err
 			}
-			if c.Verify {
-				if _, err := downloader.VerifyChart(abs, abs+".prov", c.Keyring); err != nil {
+			if r.Verify {
+				if _, err := downloader.VerifyChart(abs, abs+".prov", r.Keyring); err != nil {
 					return "", err
 				}
 			}
@@ -915,38 +912,38 @@ func (c *ChartPathOptions) LocateChart(name string, settings *cli.EnvSettings) (
 
 	dl := downloader.ChartDownloader{
 		Out:     os.Stdout,
-		Keyring: c.Keyring,
+		Keyring: r.Keyring,
 		Getters: getter.All(settings),
 		Options: []getter.Option{
-			getter.WithPassCredentialsAll(c.PassCredentialsAll),
-			getter.WithTLSClientConfig(c.CertFile, c.KeyFile, c.CaFile),
-			getter.WithInsecureSkipVerifyTLS(c.InsecureSkipTLSVerify),
-			getter.WithPlainHTTP(c.PlainHTTP),
-			getter.WithBasicAuth(c.Username, c.Password),
+			getter.WithPassCredentialsAll(r.PassCredentialsAll),
+			getter.WithTLSClientConfig(r.CertFile, r.KeyFile, r.CaFile),
+			getter.WithInsecureSkipVerifyTLS(r.InsecureSkipTLSVerify),
+			getter.WithPlainHTTP(r.PlainHTTP),
+			getter.WithBasicAuth(r.Username, r.Password),
 		},
 		RepositoryConfig: settings.RepositoryConfig,
 		RepositoryCache:  settings.RepositoryCache,
 		ContentCache:     settings.ContentCache,
-		RegistryClient:   c.registryClient,
+		RegistryClient:   r.registryClient,
 	}
 
 	if registry.IsOCI(name) {
-		dl.Options = append(dl.Options, getter.WithRegistryClient(c.registryClient))
+		dl.Options = append(dl.Options, getter.WithRegistryClient(r.registryClient))
 	}
 
-	if c.Verify {
+	if r.Verify {
 		dl.Verify = downloader.VerifyAlways
 	}
-	if c.RepoURL != "" {
+	if r.RepoURL != "" {
 		chartURL, err := repo.FindChartInRepoURL(
-			c.RepoURL,
+			r.RepoURL,
 			name,
 			getter.All(settings),
 			repo.WithChartVersion(version),
-			repo.WithClientTLS(c.CertFile, c.KeyFile, c.CaFile),
-			repo.WithUsernamePassword(c.Username, c.Password),
-			repo.WithInsecureSkipTLSVerify(c.InsecureSkipTLSVerify),
-			repo.WithPassCredentialsAll(c.PassCredentialsAll),
+			repo.WithClientTLS(r.CertFile, r.KeyFile, r.CaFile),
+			repo.WithUsernamePassword(r.Username, r.Password),
+			repo.WithInsecureSkipTLSVerify(r.InsecureSkipTLSVerify),
+			repo.WithPassCredentialsAll(r.PassCredentialsAll),
 		)
 		if err != nil {
 			return "", err
@@ -955,7 +952,7 @@ func (c *ChartPathOptions) LocateChart(name string, settings *cli.EnvSettings) (
 
 		// Only pass the user/pass on when the user has said to or when the
 		// location of the chart repo and the chart are the same domain.
-		u1, err := url.Parse(c.RepoURL)
+		u1, err := url.Parse(r.RepoURL)
 		if err != nil {
 			return "", err
 		}
@@ -967,13 +964,13 @@ func (c *ChartPathOptions) LocateChart(name string, settings *cli.EnvSettings) (
 		// Host on URL (returned from url.Parse) contains the port if present.
 		// This check ensures credentials are not passed between different
 		// services on different ports.
-		if c.PassCredentialsAll || urlEqual(u1, u2) {
-			dl.Options = append(dl.Options, getter.WithBasicAuth(c.Username, c.Password))
+		if r.PassCredentialsAll || urlEqual(u1, u2) {
+			dl.Options = append(dl.Options, getter.WithBasicAuth(r.Username, r.Password))
 		} else {
 			dl.Options = append(dl.Options, getter.WithBasicAuth("", ""))
 		}
 	} else {
-		dl.Options = append(dl.Options, getter.WithBasicAuth(c.Username, c.Password))
+		dl.Options = append(dl.Options, getter.WithBasicAuth(r.Username, r.Password))
 	}
 
 	if err := os.MkdirAll(settings.RepositoryCache, 0o755); err != nil {

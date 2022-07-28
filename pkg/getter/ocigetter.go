@@ -80,7 +80,7 @@ func (g *OCIGetter) get(href string) (*bytes.Buffer, error) {
 
 	result, err := client.Pull(ref, pullOpts...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("pulling the chart %q: %w", ref, err)
 	}
 
 	if requestingProv {
@@ -161,7 +161,7 @@ func (g *OCIGetter) newRegistryClient() (*registry.Client, error) {
 		Timeout:   g.opts.timeout,
 	})}
 	if g.opts.plainHTTP {
-		opts = append(opts, registry.ClientOptPlainHTTP())
+		opts = append(opts, registry.ClientOptPlainHTTP)
 	}
 
 	client, err := registry.NewClient(opts...)

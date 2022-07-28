@@ -106,6 +106,7 @@ func NewTempServer(t *testing.T, options ...ServerOption) *Server {
 }
 
 // Create the server, but don't yet start it
+// NewTempServerWithCleanupAndBasicAuth sets up a fake repo with basic auth enabled
 func newServer(t *testing.T, docroot string, options ...ServerOption) *Server {
 	t.Helper()
 	absdocroot, err := filepath.Abs(docroot)

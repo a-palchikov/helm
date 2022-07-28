@@ -149,7 +149,7 @@ func (file *manifestFile) sort(result *result) error {
 
 		var entry SimpleHead
 		if err := yaml.Unmarshal([]byte(m), &entry); err != nil {
-			return fmt.Errorf("YAML parse error on %s: %w", file.path, err)
+			return fmt.Errorf("YAML parse error on %s\n%s: %w", file.path, m, err)
 		}
 
 		if !hasAnyAnnotation(entry) {

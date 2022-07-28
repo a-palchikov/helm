@@ -211,10 +211,8 @@ func ClientOptHTTPClient(httpClient *http.Client) ClientOption {
 
 // ClientOptPlainHTTP returns a function that enables plain HTTP (non-TLS)
 // communication for the registry client.
-func ClientOptPlainHTTP() ClientOption {
-	return func(c *Client) {
-		c.plainHTTP = true
-	}
+func ClientOptPlainHTTP(c *Client) {
+	c.plainHTTP = true
 }
 
 type (
@@ -435,7 +433,7 @@ type (
 )
 
 // processChartPull handles chart-specific processing of a generic pull result
-func (c *Client) processChartPull(genericResult *GenericPullResult, operation *pullOperation) (*PullResult, error) {
+func (c *Client) processChartPull(ref string, genericResult *GenericPullResult, operation *pullOperation) (*PullResult, error) {
 	var err error
 
 	// Chart-specific validation
@@ -449,8 +447,8 @@ func (c *Client) processChartPull(genericResult *GenericPullResult, operation *p
 
 	numDescriptors := len(genericResult.Descriptors)
 	if numDescriptors < minNumDescriptors {
-		return nil, fmt.Errorf("manifest does not contain minimum number of descriptors (%d), descriptors found: %d",
-			minNumDescriptors, numDescriptors)
+		return nil, fmt.Errorf("manifest does not contain minimum number of descriptors (%d), descriptors found: %d pulling %q",
+			minNumDescriptors, numDescriptors, ref)
 	}
 
 	// Find chart-specific descriptors
@@ -589,7 +587,7 @@ func (c *Client) Pull(ref string, options ...PullOption) (*PullResult, error) {
 	}
 
 	// Process the result with chart-specific logic
-	return c.processChartPull(genericResult, operation)
+	return c.processChartPull(ref, genericResult, operation)
 }
 
 // PullOptWithChart returns a function that sets the withChart setting on pull

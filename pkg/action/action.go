@@ -24,6 +24,7 @@ import (
 	"io"
 	"log/slog"
 	"maps"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -43,6 +44,7 @@ import (
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
 
 	"helm.sh/helm/v4/internal/logging"
+	"helm.sh/helm/v4/internal/tlsutil"
 	"helm.sh/helm/v4/pkg/chart/common"
 	chart "helm.sh/helm/v4/pkg/chart/v2"
 	chartutil "helm.sh/helm/v4/pkg/chart/v2/util"
@@ -129,6 +131,7 @@ type Configuration struct {
 
 	// RegistryClient is a client for working with registries
 	RegistryClient *registry.Client
+	RegistryConfig RegistryConfiguration
 
 	// Capabilities describes the capabilities of the Kubernetes cluster.
 	Capabilities *common.Capabilities
@@ -174,7 +177,9 @@ const (
 )
 
 // annotateAndMerge combines multiple YAML files into a single stream of documents,
+
 // adding filename annotations to each document for later reconstruction.
+
 func annotateAndMerge(files map[string]string) (string, error) {
 	var combinedManifests []*kyaml.RNode
 
@@ -225,6 +230,7 @@ func annotateAndMerge(files map[string]string) (string, error) {
 }
 
 // splitAndDeannotate reconstructs individual files from a merged YAML stream,
+
 // removing filename annotations and grouping documents by their original filenames.
 // Documents without a filename annotation are assigned a synthesized name of the
 // form "generated-by-postrender-<fallbackPrefix>-<i>.yaml" (or
@@ -268,6 +274,60 @@ func splitAndDeannotate(postrendered, fallbackPrefix string) (map[string]string,
 		reconstructed[fname] = fileContents
 	}
 	return reconstructed, nil
+}
+
+// NewClient creates a new registry client based on the configuration
+
+func (r *RegistryConfiguration) NewClient(out io.Writer) (*registry.Client, error) {
+	var opts = []registry.ClientOption{
+		registry.ClientOptDebug(r.Debug),
+		registry.ClientOptEnableCache(true),
+		registry.ClientOptWriter(out),
+		registry.ClientOptWriter(os.Stderr),
+		registry.ClientOptCredentialsFile(r.ConfigFile),
+	}
+	if r.PlainHTTP {
+		opts = append(opts, registry.ClientOptPlainHTTP)
+	}
+	if !r.isTLS() {
+		return registry.NewClient(opts...)
+	}
+	tlsConf, err := tlsutil.NewTLSConfig(tlsutil.WithCAFile(r.CaFile),
+		tlsutil.WithCertKeyPairFiles(r.CertFile, r.KeyFile), tlsutil.WithInsecureSkipVerify(r.InsecureSkipTLSVerify))
+	if err != nil {
+		return nil, fmt.Errorf("creating TLS config for client: %w", err)
+	}
+	opts = append(opts,
+		registry.ClientOptHTTPClient(&http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: tlsConf,
+			},
+		}),
+		registry.ClientOptBasicAuth(r.Username, r.Password),
+	)
+	registryClient, err := registry.NewClient(opts...)
+	if err != nil {
+		return nil, err
+	}
+	return registryClient, nil
+}
+
+// RegistryConfiguration defines the configuration of a registry client
+
+type RegistryConfiguration struct {
+	Debug                 bool
+	PlainHTTP             bool
+	Username              string
+	Password              string
+	CertFile              string
+	KeyFile               string
+	CaFile                string
+	InsecureSkipTLSVerify bool
+	ConfigFile            string
+}
+
+func (r *RegistryConfiguration) isTLS() bool {
+	return r.CaFile != "" && r.CertFile != "" && r.KeyFile != ""
 }
 
 // renderResources renders the templates in a chart

@@ -92,6 +92,8 @@ type EnvSettings struct {
 	ColorMode string
 	// ContentCache is the location where cached charts are stored
 	ContentCache string
+	// PlainHTTP forces plain HTTP protocol for the registry
+	PlainHTTP bool
 }
 
 func New() *EnvSettings {
@@ -115,6 +117,7 @@ func New() *EnvSettings {
 		BurstLimit:                envIntOr("HELM_BURST_LIMIT", defaultBurstLimit),
 		QPS:                       envFloat32Or("HELM_QPS", defaultQPS),
 		ColorMode:                 envColorMode(),
+		PlainHTTP:                 envBoolOr("HELM_PLAIN_HTTP", false),
 	}
 	env.Debug, _ = strconv.ParseBool(os.Getenv("HELM_DEBUG"))
 

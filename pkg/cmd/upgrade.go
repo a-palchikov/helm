@@ -105,8 +105,7 @@ func newUpgradeCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client.Namespace = settings.Namespace()
 
-			registryClient, err := newRegistryClient(out, client.CertFile, client.KeyFile, client.CaFile,
-				client.InsecureSkipTLSVerify, client.PlainHTTP, client.Username, client.Password)
+			registryClient, err := client.RegistryConfiguration.NewClient(out)
 			if err != nil {
 				return fmt.Errorf("missing registry client: %w", err)
 			}

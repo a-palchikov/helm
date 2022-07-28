@@ -85,8 +85,7 @@ func newTemplateCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 				client.KubeVersion = parsedKubeVersion
 			}
 
-			registryClient, err := newRegistryClient(out, client.CertFile, client.KeyFile, client.CaFile,
-				client.InsecureSkipTLSVerify, client.PlainHTTP, client.Username, client.Password)
+			registryClient, err := client.RegistryConfiguration.NewClient(out)
 			if err != nil {
 				return fmt.Errorf("missing registry client: %w", err)
 			}
@@ -105,6 +104,7 @@ func newTemplateCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 			client.Replace = true // Skip the name check
 			client.APIVersions = common.VersionSet(extraAPIs)
 			client.IncludeCRDs = includeCrds
+			client.Version = chartVersion
 			rel, err := runInstall(args, client, valueOpts, out)
 
 			if err != nil && !settings.Debug {
@@ -218,6 +218,7 @@ func newTemplateCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 	f.StringVar(&kubeVersion, "kube-version", "", "Kubernetes version used for Capabilities.KubeVersion")
 	f.StringSliceVarP(&extraAPIs, "api-versions", "a", []string{}, "Kubernetes api versions used for Capabilities.APIVersions (multiple can be specified)")
 	f.BoolVar(&client.UseReleaseName, "release-name", false, "use release name in the output-dir path.")
+	f.StringVar(&chartVersion, "chart-version", "", "set the version on the chart to this semver version")
 	f.String(
 		"dry-run",
 		"client",
@@ -279,3 +280,5 @@ func ensureDirectoryForFile(file string) error {
 
 	return os.MkdirAll(baseDir, 0o755)
 }
+
+var chartVersion string

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd // import "helm.sh/helm/v4/pkg/cmd"
+package cmd
 
 import (
 	"context"
@@ -22,23 +22,19 @@ import (
 	"io"
 	"log"
 	"log/slog"
-	"net/http"
 	"os"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/yaml"
-
+	"helm.sh/helm/v4/internal/logging"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/yaml"
 
-	"helm.sh/helm/v4/internal/logging"
-	"helm.sh/helm/v4/internal/tlsutil"
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/cli"
 	kubefake "helm.sh/helm/v4/pkg/kube/fake"
-	"helm.sh/helm/v4/pkg/registry"
 	ri "helm.sh/helm/v4/pkg/release"
 	release "helm.sh/helm/v4/pkg/release/v1"
 	"helm.sh/helm/v4/pkg/repo/v1"
@@ -121,19 +117,11 @@ func NewRootCmd(out io.Writer, args []string, logSetup func(bool)) (*cobra.Comma
 	return cmd, nil
 }
 
-// SetupLogging sets up Helm logging used by the Helm client.
-// This function is passed to the NewRootCmd function to enable logging. Any other
-// application that uses the NewRootCmd function to setup all the Helm commands may
-// use this function to setup logging or their own. Using a custom logging setup function
-// enables applications using Helm commands to integrate with their existing logging
-// system.
-// The debug argument is the value if Helm is set for debugging (i.e. --debug flag)
 func SetupLogging(debug bool) {
 	logger := logging.NewLogger(func() bool { return debug })
 	slog.SetDefault(logger)
 }
 
-// configureColorOutput configures the color output based on the ColorMode setting
 func configureColorOutput(settings *cli.EnvSettings) {
 	switch settings.ColorMode {
 	case "never":
@@ -148,6 +136,7 @@ func configureColorOutput(settings *cli.EnvSettings) {
 }
 
 func newRootCmdWithConfig(actionConfig *action.Configuration, out io.Writer, args []string, logSetup func(bool)) (*cobra.Command, error) {
+	var quiet bool
 	cmd := &cobra.Command{
 		Use:          "helm",
 		Short:        "The Helm package manager for Kubernetes.",
@@ -166,6 +155,7 @@ func newRootCmdWithConfig(actionConfig *action.Configuration, out io.Writer, arg
 	}
 
 	flags := cmd.PersistentFlags()
+	flags.BoolVar(&quiet, "quiet", false, "Silence output of commands")
 
 	settings.AddFlags(flags)
 	addKlogFlags(flags)
@@ -257,11 +247,17 @@ func newRootCmdWithConfig(actionConfig *action.Configuration, out io.Writer, arg
 		log.Fatal(err)
 	}
 
-	registryClient, err := newDefaultRegistryClient(out, false, "", "")
+	if quiet {
+		out = io.Discard
+	}
+
+	actionConfig.RegistryConfig.Debug = settings.Debug
+	actionConfig.RegistryConfig.PlainHTTP = settings.PlainHTTP
+	actionConfig.RegistryConfig.ConfigFile = settings.RegistryConfig
+	actionConfig.RegistryClient, err = actionConfig.RegistryConfig.NewClient(out)
 	if err != nil {
 		return nil, err
 	}
-	actionConfig.RegistryClient = registryClient
 
 	// Add subcommands
 	cmd.AddCommand(
@@ -311,8 +307,6 @@ func newRootCmdWithConfig(actionConfig *action.Configuration, out io.Writer, arg
 	return cmd, nil
 }
 
-// This function loads releases into the memory storage if the
-// environment variable is properly set.
 func loadReleasesInMemory(actionConfig *action.Configuration) {
 	filePaths := strings.Split(os.Getenv("HELM_MEMORY_DRIVER_DATA"), ":")
 	if len(filePaths) == 0 {
@@ -349,7 +343,6 @@ func loadReleasesInMemory(actionConfig *action.Configuration) {
 	mem.SetNamespace(settings.Namespace())
 }
 
-// hookOutputWriter provides the writer for writing hook logs.
 func hookOutputWriter(_, _, _ string) io.Writer {
 	return log.Writer()
 }
@@ -398,76 +391,6 @@ func checkForExpiredRepos(repofile string) {
 			)
 		}
 	}
-}
-
-func newRegistryClient(
-	out io.Writer, certFile, keyFile, caFile string, insecureSkipTLSVerify, plainHTTP bool, username, password string,
-) (*registry.Client, error) {
-	if certFile != "" && keyFile != "" || caFile != "" || insecureSkipTLSVerify {
-		registryClient, err := newRegistryClientWithTLS(out, certFile, keyFile, caFile, insecureSkipTLSVerify, username, password)
-		if err != nil {
-			return nil, err
-		}
-		return registryClient, nil
-	}
-	registryClient, err := newDefaultRegistryClient(out, plainHTTP, username, password)
-	if err != nil {
-		return nil, err
-	}
-	return registryClient, nil
-}
-
-func newDefaultRegistryClient(out io.Writer, plainHTTP bool, username, password string) (*registry.Client, error) {
-	opts := []registry.ClientOption{
-		registry.ClientOptDebug(settings.Debug),
-		registry.ClientOptEnableCache(true),
-		registry.ClientOptWriter(out),
-		registry.ClientOptCredentialsFile(settings.RegistryConfig),
-		registry.ClientOptBasicAuth(username, password),
-	}
-	if plainHTTP {
-		opts = append(opts, registry.ClientOptPlainHTTP())
-	}
-
-	// Create a new registry client
-	registryClient, err := registry.NewClient(opts...)
-	if err != nil {
-		return nil, err
-	}
-	return registryClient, nil
-}
-
-func newRegistryClientWithTLS(
-	out io.Writer, certFile, keyFile, caFile string, insecureSkipTLSVerify bool, username, password string,
-) (*registry.Client, error) {
-	tlsConf, err := tlsutil.NewTLSConfig(
-		tlsutil.WithInsecureSkipVerify(insecureSkipTLSVerify),
-		tlsutil.WithCertKeyPairFiles(certFile, keyFile),
-		tlsutil.WithCAFile(caFile),
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("can't create TLS config for client: %w", err)
-	}
-
-	// Create a new registry client
-	registryClient, err := registry.NewClient(
-		registry.ClientOptDebug(settings.Debug),
-		registry.ClientOptEnableCache(true),
-		registry.ClientOptWriter(out),
-		registry.ClientOptCredentialsFile(settings.RegistryConfig),
-		registry.ClientOptHTTPClient(&http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConf,
-				Proxy:           http.ProxyFromEnvironment,
-			},
-		}),
-		registry.ClientOptBasicAuth(username, password),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return registryClient, nil
 }
 
 type CommandError struct {

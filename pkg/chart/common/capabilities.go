@@ -34,7 +34,7 @@ import (
 
 const (
 	kubeVersionMajorTesting = 1
-	kubeVersionMinorTesting = 20
+	kubeVersionMinorTesting = 33
 )
 
 var (

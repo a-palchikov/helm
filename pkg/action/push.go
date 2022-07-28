@@ -102,7 +102,6 @@ func (p *Push) Run(chartRef string, remote string) (string, error) {
 			pusher.WithPlainHTTP(p.plainHTTP),
 		},
 	}
-
 	if registry.IsOCI(remote) {
 		// Don't use the default registry client if tls options are set.
 		c.Options = append(c.Options, pusher.WithRegistryClient(p.cfg.RegistryClient))

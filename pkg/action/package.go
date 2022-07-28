@@ -26,9 +26,12 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"golang.org/x/term"
+	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
+	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 	"sigs.k8s.io/yaml"
 
 	ci "helm.sh/helm/v4/pkg/chart"
+	"helm.sh/helm/v4/pkg/chart/common"
 	"helm.sh/helm/v4/pkg/chart/loader"
 	chart "helm.sh/helm/v4/pkg/chart/v2"
 	chartutil "helm.sh/helm/v4/pkg/chart/v2/util"
@@ -39,6 +42,8 @@ import (
 //
 // It provides the implementation of 'helm package'.
 type Package struct {
+	RegistryConfiguration
+
 	Sign             bool
 	Key              string
 	Keyring          string
@@ -49,15 +54,8 @@ type Package struct {
 	Destination      string
 	DependencyUpdate bool
 
-	RepositoryConfig      string
-	RepositoryCache       string
-	PlainHTTP             bool
-	Username              string
-	Password              string
-	CertFile              string
-	KeyFile               string
-	CaFile                string
-	InsecureSkipTLSVerify bool
+	RepositoryConfig string
+	RepositoryCache  string
 }
 
 const (
@@ -70,10 +68,10 @@ func NewPackage() *Package {
 }
 
 // Run executes 'helm package' against the given chart and returns the path to the packaged chart.
-func (p *Package) Run(path string, _ map[string]any) (string, error) {
+func (p *Package) Run(path string, vals map[string]any) (string, error) {
 	chrt, err := loader.LoadDir(path)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("loading directory at %s: %w", path, err)
 	}
 	var ch *chart.Chart
 	switch c := chrt.(type) {
@@ -96,7 +94,7 @@ func (p *Package) Run(path string, _ map[string]any) (string, error) {
 	}
 
 	if err := validateVersion(ch.Metadata.Version); err != nil {
-		return "", err
+		return "", fmt.Errorf("validating version: %w", err)
 	}
 
 	if p.AppVersion != "" {
@@ -105,7 +103,7 @@ func (p *Package) Run(path string, _ map[string]any) (string, error) {
 
 	if reqs := ac.MetaDependencies(); len(reqs) > 0 {
 		if err := CheckDependencies(ch, reqs); err != nil {
-			return "", err
+			return "", fmt.Errorf("validating dependencies: %w", err)
 		}
 	}
 
@@ -114,16 +112,61 @@ func (p *Package) Run(path string, _ map[string]any) (string, error) {
 		// Save to the current working directory.
 		dest, err = os.Getwd()
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("detecting working directory: %w", err)
 		}
 	} else {
 		// Otherwise save to set destination
 		dest = p.Destination
 	}
 
+	// If vals is not empty and the values.yaml file does not exist, then we need to generate a values.yaml file.
+	needUpdate := len(vals) != 0
+
+	src := &kyaml.Node{}
+	if err := src.Encode(vals); err != nil {
+		return "", fmt.Errorf("encoding values: %w", err)
+	}
+
+	for _, f := range ch.Raw {
+		// Always run to ensure that the values.yaml file is formatted.
+		if f.Name == chartutil.ValuesfileName && len(f.Data) != 0 {
+			dest, err := kyaml.Parse(string(f.Data))
+			if err != nil {
+				fmt.Printf("Invalid YAML at %s:\n%s\n", f.Name, string(f.Data))
+				return "", fmt.Errorf("parsing YAML: %w", err)
+			}
+
+			// In the case of saving yaml comments, merges fields from src into dest.
+			rnode, err := merge2.Merge(kyaml.NewRNode(src), dest, kyaml.MergeOptions{})
+			if err != nil {
+				return "", fmt.Errorf("merging values: %w", err)
+			}
+
+			data, err := rnode.String()
+			if err != nil {
+				return "", fmt.Errorf("converting rnode to text: %w", err)
+			}
+			f.Data = []byte(data)
+
+			needUpdate = false
+		}
+	}
+
+	if needUpdate {
+		data, err := kyaml.Marshal(src)
+		if err != nil {
+			return "", fmt.Errorf("serializing as YAML: %w", err)
+		}
+
+		ch.Raw = append(ch.Raw, &common.File{
+			Name: chartutil.ValuesfileName,
+			Data: data,
+		})
+	}
+
 	name, err := chartutil.Save(ch, dest)
 	if err != nil {
-		return "", fmt.Errorf("failed to save: %w", err)
+		return "", fmt.Errorf("failed to save %s: %w", dest, err)
 	}
 
 	if p.Sign {

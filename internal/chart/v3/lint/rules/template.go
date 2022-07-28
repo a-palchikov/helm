@@ -43,7 +43,7 @@ import (
 )
 
 // Templates lints the templates in the Linter.
-func Templates(linter *support.Linter, values map[string]any, namespace string, _ bool) {
+func Templates(linter *support.Linter, values map[string]any, namespace string) {
 	TemplatesWithKubeVersion(linter, values, namespace, nil)
 }
 
@@ -157,7 +157,7 @@ func TemplatesWithSkipSchemaValidation(linter *support.Linter, values map[string
 
 				//  If YAML linting fails here, it will always fail in the next block as well, so we should return here.
 				// fix https://github.com/helm/helm/issues/11391
-				if !linter.RunLinterRule(support.ErrorSev, fpath, validateYamlContent(err)) {
+				if !linter.RunLinterRule(support.ErrorSev, fpath, validateYamlContent(strings.NewReader(renderedContent), err)) {
 					return
 				}
 				if yamlStruct != nil {
@@ -231,8 +231,9 @@ func validateAllowedExtension(fileName string) error {
 	return fmt.Errorf("file extension '%s' not valid. Valid extensions are .yaml, .yml, .tpl, or .txt", ext)
 }
 
-func validateYamlContent(err error) error {
+func validateYamlContent(content io.Reader, err error) error {
 	if err != nil {
+		_, _ = io.Copy(os.Stdout, content)
 		return fmt.Errorf("unable to parse YAML: %w", err)
 	}
 	return nil
@@ -324,7 +325,7 @@ func validateListAnnotations(yamlStruct *k8sYamlStruct, manifest string) error {
 		}{}
 
 		if err := yaml.Unmarshal([]byte(manifest), &m); err != nil {
-			return validateYamlContent(err)
+			return validateYamlContent(strings.NewReader(manifest), err)
 		}
 
 		for _, i := range m.Items {
