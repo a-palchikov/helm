@@ -26,9 +26,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
+	"oras.land/oras-go/pkg/auth"
 
 	"helm.sh/helm/v4/internal/tlsutil"
 	"helm.sh/helm/v4/pkg/action"
@@ -155,7 +155,12 @@ func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 	flags.ParseErrorsWhitelist.UnknownFlags = true
 	flags.Parse(args)
 
-	registryClient, err := newDefaultRegistryClient(false, "", "")
+	var opts []registry.ClientOption
+	if settings.PlainHTTP {
+		opts = append(opts, registry.ClientOptPlainHTTP)
+	}
+
+	registryClient, err := newDefaultRegistryClient(opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -257,9 +262,7 @@ func checkForExpiredRepos(repofile string) {
 
 }
 
-func newRegistryClient(
-	certFile, keyFile, caFile string, insecureSkipTLSverify, plainHTTP bool, username, password string,
-) (*registry.Client, error) {
+func newRegistryClient(certFile, keyFile, caFile string, insecureSkipTLSverify, plainHTTP bool) (*registry.Client, error) {
 	if certFile != "" && keyFile != "" || caFile != "" || insecureSkipTLSverify {
 		registryClient, err := newRegistryClientWithTLS(certFile, keyFile, caFile, insecureSkipTLSverify, username, password)
 		if err != nil {
@@ -267,25 +270,24 @@ func newRegistryClient(
 		}
 		return registryClient, nil
 	}
-	registryClient, err := newDefaultRegistryClient(plainHTTP, username, password)
+	var opts []registry.ClientOption
+	if plainHTTP {
+		opts = append(opts, registry.ClientOptPlainHTTP)
+	}
+	registryClient, err := newDefaultRegistryClient(opts...)
 	if err != nil {
 		return nil, err
 	}
 	return registryClient, nil
 }
 
-func newDefaultRegistryClient(plainHTTP bool, username, password string) (*registry.Client, error) {
-	opts := []registry.ClientOption{
+func newDefaultRegistryClient(opts ...registry.ClientOption) (*registry.Client, error) {
+	opts = append([]registry.ClientOption{
 		registry.ClientOptDebug(settings.Debug),
 		registry.ClientOptEnableCache(true),
 		registry.ClientOptWriter(os.Stderr),
 		registry.ClientOptCredentialsFile(settings.RegistryConfig),
-		registry.ClientOptBasicAuth(username, password),
-	}
-	if plainHTTP {
-		opts = append(opts, registry.ClientOptPlainHTTP())
-	}
-
+	}, opts...)
 	// Create a new registry client
 	registryClient, err := registry.NewClient(opts...)
 	if err != nil {
