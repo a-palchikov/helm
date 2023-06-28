@@ -79,7 +79,8 @@ type (
 		registryAuthorizer RemoteClient
 		credentialsStore   credentials.Store
 		httpClient         *http.Client
-		plainHTTP          bool
+		// resolverOptions optionally specifies additional resolver options
+		resolverOptions []auth.ResolverOption
 		err                error // pass any errors from the ClientOption functions
 	}
 
@@ -225,10 +226,8 @@ func ClientOptHTTPClient(httpClient *http.Client) ClientOption {
 	}
 }
 
-func ClientOptPlainHTTP() ClientOption {
-	return func(c *Client) {
-		c.plainHTTP = true
-	}
+func ClientOptPlainHTTP(c *Client) {
+	c.plainHTTP = true
 }
 
 func ClientOptResolver(_ remotes.Resolver) ClientOption {
