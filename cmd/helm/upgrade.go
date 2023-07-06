@@ -102,12 +102,14 @@ func newUpgradeCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 		RunE: func(_ *cobra.Command, args []string) error {
 			client.Namespace = settings.Namespace()
 
-			registryClient, err := newRegistryClient(client.CertFile, client.KeyFile, client.CaFile,
-				client.InsecureSkipTLSverify, client.PlainHTTP, client.Username, client.Password)
-			if err != nil {
-				return fmt.Errorf("missing registry client: %w", err)
+			// FIXME(dima): client: user/pass/plainHTTP
+			if client.IsTLS() {
+				registryClient, err := newRegistryClientWithTLS(client.CertFile, client.KeyFile, client.CaFile, client.InsecureSkipTLSverify)
+				if err != nil {
+					return fmt.Errorf("missing registry client: %w", err)
+				}
+				client.SetRegistryClient(registryClient)
 			}
-			client.SetRegistryClient(registryClient)
 
 			// This is for the case where "" is specifically passed in as a
 			// value. When there is no value passed in NoOptDefVal will be used

@@ -262,6 +262,8 @@ func checkForExpiredRepos(repofile string) {
 
 }
 
+// FIXME(dima)
+/*
 func newRegistryClient(certFile, keyFile, caFile string, insecureSkipTLSverify, plainHTTP bool) (*registry.Client, error) {
 	if certFile != "" && keyFile != "" || caFile != "" || insecureSkipTLSverify {
 		registryClient, err := newRegistryClientWithTLS(certFile, keyFile, caFile, insecureSkipTLSverify, username, password)
@@ -280,6 +282,7 @@ func newRegistryClient(certFile, keyFile, caFile string, insecureSkipTLSverify, 
 	}
 	return registryClient, nil
 }
+*/
 
 func newDefaultRegistryClient(opts ...registry.ClientOption) (*registry.Client, error) {
 	opts = append([]registry.ClientOption{

@@ -139,6 +139,11 @@ type ChartPathOptions struct {
 	registryClient *registry.Client
 }
 
+// IsTLS determines if the options describe a valid TLS configuration
+func (r *ChartPathOptions) IsTLS() bool {
+	return r.CertFile != "" && r.KeyFile != "" || r.CaFile != "" || r.InsecureSkipTLSverify
+}
+
 // NewInstall creates a new Install object with the given configuration.
 func NewInstall(cfg *Configuration) *Install {
 	in := &Install{
