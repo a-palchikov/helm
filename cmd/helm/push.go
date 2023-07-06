@@ -44,6 +44,10 @@ type registryPushOptions struct {
 	username              string
 }
 
+func (r *registryPushOptions) isTLS() bool {
+	return r.certFile != "" && r.keyFile != "" || r.caFile != "" || r.insecureSkipTLSverify
+}
+
 func newPushCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 	o := &registryPushOptions{}
 
@@ -69,15 +73,15 @@ func newPushCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 			}
 			return noMoreArgsComp()
 		},
-		RunE: func(_ *cobra.Command, args []string) error {
-			registryClient, err := newRegistryClient(
-				o.certFile, o.keyFile, o.caFile, o.insecureSkipTLSverify, o.plainHTTP, o.username, o.password,
-			)
-
-			if err != nil {
-				return fmt.Errorf("missing registry client: %w", err)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// FIXME(dima): plainHTTP
+			if o.isTLS() {
+				registryClient, err := newRegistryClientWithTLS(o.certFile, o.keyFile, o.caFile, o.insecureSkipTLSverify, o.username, o.password,)
+				if err != nil {
+					return fmt.Errorf("missing registry client: %w", err)
+				}
+				cfg.RegistryClient = registryClient
 			}
-			cfg.RegistryClient = registryClient
 			chartRef := args[0]
 			remote := args[1]
 			client := action.NewPushWithOpts(action.WithPushConfig(cfg),

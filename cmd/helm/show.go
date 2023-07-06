@@ -224,12 +224,14 @@ func runShow(args []string, client *action.Show) (string, error) {
 	return client.Run(cp)
 }
 
+// FIXME(dima): client: username/password/plainHTTP
 func addRegistryClient(client *action.Show) error {
-	registryClient, err := newRegistryClient(client.CertFile, client.KeyFile, client.CaFile,
-		client.InsecureSkipTLSverify, client.PlainHTTP, client.Username, client.Password)
-	if err != nil {
-		return fmt.Errorf("missing registry client: %w", err)
+	if client.IsTLS() {
+		registryClient, err := newRegistryClientWithTLS(client.CertFile, client.KeyFile, client.CaFile, client.InsecureSkipTLSverify)
+		if err != nil {
+			return fmt.Errorf("missing registry client: %w", err)
+		}
+		client.SetRegistryClient(registryClient)
 	}
-	client.SetRegistryClient(registryClient)
 	return nil
 }
