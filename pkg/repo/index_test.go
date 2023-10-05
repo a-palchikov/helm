@@ -450,7 +450,7 @@ func verifyLocalIndex(t *testing.T, i *IndexFile) {
 }
 
 func verifyLocalChartsFile(t *testing.T, chartsContent []byte, indexContent *IndexFile) {
-	var expected, reald []string
+	var expected, actual []string
 	for chart := range indexContent.Entries {
 		expected = append(expected, chart)
 	}
@@ -458,12 +458,12 @@ func verifyLocalChartsFile(t *testing.T, chartsContent []byte, indexContent *Ind
 
 	scanner := bufio.NewScanner(bytes.NewReader(chartsContent))
 	for scanner.Scan() {
-		reald = append(reald, scanner.Text())
+		actual = append(actual, scanner.Text())
 	}
-	sort.Strings(reald)
+	sort.Strings(actual)
 
-	if strings.Join(expected, " ") != strings.Join(reald, " ") {
-		t.Errorf("Cached charts file content unexpected. Expected:\n%s\ngot:\n%s", expected, reald)
+	if strings.Join(expected, " ") != strings.Join(actual, " ") {
+		t.Errorf("Cached charts file content unexpected. Expected:\n%s\ngot:\n%s", expected, actual)
 	}
 }
 

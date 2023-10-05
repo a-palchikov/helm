@@ -65,7 +65,7 @@ func (f *FailingKubeClient) Get(resources kube.ResourceList, related bool) (map[
 	return f.PrintingKubeClient.Get(resources, related)
 }
 
-// Waits the amount of time defined on f.WaitDuration, then returns the configured error if set or prints.
+// Wait waits the amount of time defined on f.WaitDuration, then returns the configured error if set or prints.
 func (f *FailingKubeClient) Wait(resources kube.ResourceList, d time.Duration) error {
 	time.Sleep(f.WaitDuration)
 	if f.WaitError != nil {

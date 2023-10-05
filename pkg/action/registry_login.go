@@ -41,7 +41,7 @@ func WithCertFile(certFile string) RegistryLoginOpt {
 	}
 }
 
-// WithKeyFile specifies whether to very certificates when communicating.
+// WithInsecure specifies whether to very certificates when communicating.
 func WithInsecure(insecure bool) RegistryLoginOpt {
 	return func(r *RegistryLogin) error {
 		r.insecure = insecure

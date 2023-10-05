@@ -28,7 +28,6 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
-	"oras.land/oras-go/pkg/auth"
 
 	"helm.sh/helm/v4/internal/tlsutil"
 	"helm.sh/helm/v4/pkg/action"
@@ -215,7 +214,6 @@ func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 }
 
 func checkForExpiredRepos(repofile string) {
-
 	expiredRepos := []struct {
 		name string
 		old  string

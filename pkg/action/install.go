@@ -232,7 +232,7 @@ func (i *Install) Run(chrt *chart.Chart, vals map[string]interface{}) (*release.
 	return i.RunWithContext(ctx, chrt, vals)
 }
 
-// Run executes the installation with Context
+// RunWithContext executes the installation with Context
 //
 // When the task is cancelled through ctx, the function returns and the install
 // proceeds in the background.
@@ -744,21 +744,21 @@ OUTER:
 // - URL
 //
 // If 'verify' was set on ChartPathOptions, this will attempt to also verify the chart.
-func (c *ChartPathOptions) LocateChart(name string, settings *cli.EnvSettings) (string, error) {
-	if registry.IsOCI(name) && c.registryClient == nil {
+func (r *ChartPathOptions) LocateChart(name string, settings *cli.EnvSettings) (string, error) {
+	if registry.IsOCI(name) && r.registryClient == nil {
 		return "", fmt.Errorf("unable to lookup chart %q, missing registry client", name)
 	}
 
 	name = strings.TrimSpace(name)
-	version := strings.TrimSpace(c.Version)
+	version := strings.TrimSpace(r.Version)
 
 	if _, err := os.Stat(name); err == nil {
 		abs, err := filepath.Abs(name)
 		if err != nil {
 			return abs, err
 		}
-		if c.Verify {
-			if _, err := downloader.VerifyChart(abs, c.Keyring); err != nil {
+		if r.Verify {
+			if _, err := downloader.VerifyChart(abs, r.Keyring); err != nil {
 				return "", err
 			}
 		}
@@ -770,30 +770,30 @@ func (c *ChartPathOptions) LocateChart(name string, settings *cli.EnvSettings) (
 
 	dl := downloader.ChartDownloader{
 		Out:     os.Stdout,
-		Keyring: c.Keyring,
+		Keyring: r.Keyring,
 		Getters: getter.All(settings),
 		Options: []getter.Option{
-			getter.WithPassCredentialsAll(c.PassCredentialsAll),
-			getter.WithTLSClientConfig(c.CertFile, c.KeyFile, c.CaFile),
-			getter.WithInsecureSkipVerifyTLS(c.InsecureSkipTLSverify),
-			getter.WithPlainHTTP(c.PlainHTTP),
-			getter.WithBasicAuth(c.Username, c.Password),
+			getter.WithPassCredentialsAll(r.PassCredentialsAll),
+			getter.WithTLSClientConfig(r.CertFile, r.KeyFile, r.CaFile),
+			getter.WithInsecureSkipVerifyTLS(r.InsecureSkipTLSverify),
+			getter.WithPlainHTTP(r.PlainHTTP),
+			getter.WithBasicAuth(r.Username, r.Password),
 		},
 		RepositoryConfig: settings.RepositoryConfig,
 		RepositoryCache:  settings.RepositoryCache,
-		RegistryClient:   c.registryClient,
+		RegistryClient:   r.registryClient,
 	}
 
 	if registry.IsOCI(name) {
-		dl.Options = append(dl.Options, getter.WithRegistryClient(c.registryClient))
+		dl.Options = append(dl.Options, getter.WithRegistryClient(r.registryClient))
 	}
 
-	if c.Verify {
+	if r.Verify {
 		dl.Verify = downloader.VerifyAlways
 	}
-	if c.RepoURL != "" {
-		chartURL, err := repo.FindChartInAuthAndTLSAndPassRepoURL(c.RepoURL, c.Username, c.Password, name, version,
-			c.CertFile, c.KeyFile, c.CaFile, c.InsecureSkipTLSverify, c.PassCredentialsAll, getter.All(settings))
+	if r.RepoURL != "" {
+		chartURL, err := repo.FindChartInAuthAndTLSAndPassRepoURL(r.RepoURL, r.Username, r.Password, name, version,
+			r.CertFile, r.KeyFile, r.CaFile, r.InsecureSkipTLSverify, r.PassCredentialsAll, getter.All(settings))
 		if err != nil {
 			return "", err
 		}
@@ -801,7 +801,7 @@ func (c *ChartPathOptions) LocateChart(name string, settings *cli.EnvSettings) (
 
 		// Only pass the user/pass on when the user has said to or when the
 		// location of the chart repo and the chart are the same domain.
-		u1, err := url.Parse(c.RepoURL)
+		u1, err := url.Parse(r.RepoURL)
 		if err != nil {
 			return "", err
 		}
@@ -813,13 +813,13 @@ func (c *ChartPathOptions) LocateChart(name string, settings *cli.EnvSettings) (
 		// Host on URL (returned from url.Parse) contains the port if present.
 		// This check ensures credentials are not passed between different
 		// services on different ports.
-		if c.PassCredentialsAll || (u1.Scheme == u2.Scheme && u1.Host == u2.Host) {
-			dl.Options = append(dl.Options, getter.WithBasicAuth(c.Username, c.Password))
+		if r.PassCredentialsAll || (u1.Scheme == u2.Scheme && u1.Host == u2.Host) {
+			dl.Options = append(dl.Options, getter.WithBasicAuth(r.Username, r.Password))
 		} else {
 			dl.Options = append(dl.Options, getter.WithBasicAuth("", ""))
 		}
 	} else {
-		dl.Options = append(dl.Options, getter.WithBasicAuth(c.Username, c.Password))
+		dl.Options = append(dl.Options, getter.WithBasicAuth(r.Username, r.Password))
 	}
 
 	if err := os.MkdirAll(settings.RepositoryCache, 0o755); err != nil {

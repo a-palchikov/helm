@@ -323,10 +323,7 @@ List1:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir := ensure.TempDir(t)
-			t.Cleanup(func() {
-				os.RemoveAll(dir)
-			})
+			dir := t.TempDir()
 
 			chartToPackage := "testdata/testcharts/" + tt.chart
 			cmd := fmt.Sprintf("package %s --destination=%s %s", chartToPackage, dir, strings.Join(tt.args, " "))
