@@ -44,7 +44,7 @@ type TestHTTPGetter struct {
 	MockError    error
 }
 
-func (t *TestHTTPGetter) Get(_ string, _ ...getter.Option) (*bytes.Buffer, error) {
+func (t *TestHTTPGetter) Get(string, ...getter.Option) (*bytes.Buffer, error) {
 	return t.MockResponse, t.MockError
 }
 

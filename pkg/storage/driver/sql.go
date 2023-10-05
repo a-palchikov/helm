@@ -325,7 +325,7 @@ func (s *SQL) Get(key string) (*rspb.Release, error) {
 		return nil, err
 	}
 
-	if release.Labels, err = s.getReleaseCustomLabels(key, s.namespace); err != nil {
+	if release.Labels, err = s.getReleaseCustomLabels(key); err != nil {
 		s.Log("failed to get release %s/%s custom labels: %v", s.namespace, key, err)
 		return nil, err
 	}
@@ -365,7 +365,7 @@ func (s *SQL) List(filter func(*rspb.Release) bool) ([]*rspb.Release, error) {
 			continue
 		}
 
-		if release.Labels, err = s.getReleaseCustomLabels(record.Key, record.Namespace); err != nil {
+		if release.Labels, err = s.getReleaseCustomLabels(record.Key); err != nil {
 			s.Log("failed to get release %s/%s custom labels: %v", record.Namespace, record.Key, err)
 			return nil, err
 		}
@@ -431,7 +431,7 @@ func (s *SQL) Query(labels map[string]string) ([]*rspb.Release, error) {
 			continue
 		}
 
-		if release.Labels, err = s.getReleaseCustomLabels(record.Key, record.Namespace); err != nil {
+		if release.Labels, err = s.getReleaseCustomLabels(record.Key); err != nil {
 			s.Log("failed to get release %s/%s custom labels: %v", record.Namespace, record.Key, err)
 			return nil, err
 		}
@@ -642,7 +642,7 @@ func (s *SQL) Delete(key string) (*rspb.Release, error) {
 		return release, err
 	}
 
-	if release.Labels, err = s.getReleaseCustomLabels(key, s.namespace); err != nil {
+	if release.Labels, err = s.getReleaseCustomLabels(key); err != nil {
 		s.Log("failed to get release %s/%s custom labels: %v", s.namespace, key, err)
 		return nil, err
 	}

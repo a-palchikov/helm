@@ -120,13 +120,13 @@ func loadTestIndex(_ *testing.T, all bool) *Index {
 }
 
 func TestAll(t *testing.T) {
-	i := loadTestIndex(t, false)
+	i := loadTestIndex(false)
 	all := i.All()
 	if len(all) != 4 {
 		t.Errorf("Expected 4 entries, got %d", len(all))
 	}
 
-	i = loadTestIndex(t, true)
+	i = loadTestIndex(true)
 	all = i.All()
 	if len(all) != 5 {
 		t.Errorf("Expected 5 entries, got %d", len(all))
@@ -134,7 +134,7 @@ func TestAll(t *testing.T) {
 }
 
 func TestAddRepo_Sort(t *testing.T) {
-	i := loadTestIndex(t, true)
+	i := loadTestIndex(true)
 	sr, err := i.Search("TESTING/SANTA-MARIA", 100, false)
 	if err != nil {
 		t.Fatal(err)
@@ -241,7 +241,7 @@ func TestSearchByName(t *testing.T) {
 		},
 	}
 
-	i := loadTestIndex(t, false)
+	i := loadTestIndex(false)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -281,7 +281,7 @@ func TestSearchByName(t *testing.T) {
 
 func TestSearchByNameAll(t *testing.T) {
 	// Test with the All bit turned on.
-	i := loadTestIndex(t, true)
+	i := loadTestIndex(true)
 	cs, err := i.Search("santa-maria", 100, false)
 	if err != nil {
 		t.Fatal(err)
