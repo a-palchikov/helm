@@ -114,7 +114,7 @@ func coalesceDeps(printf printFn, chrt *chart.Chart, dest map[string]interface{}
 			dvmap := dv.(map[string]interface{})
 			subPrefix := concatPrefix(prefix, chrt.Metadata.Name)
 			// Get globals out of dest and merge them into dvmap.
-			coalesceGlobals(printf, dvmap, dest, subPrefix)
+			coalesceGlobals(printf, dvmap, dest, subPrefix, merge)
 			// Now coalesce the rest of the values.
 			var err error
 			dest[subchart.Name()], err = coalesce(printf, subchart, dvmap, subPrefix, merge)
