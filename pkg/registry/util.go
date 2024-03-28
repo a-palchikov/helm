@@ -141,7 +141,6 @@ func NewRegistryClientWithTLS(out io.Writer, certFile, keyFile, caFile string, i
 
 // generateOCIAnnotations will generate OCI annotations to include within the OCI manifest
 func generateOCIAnnotations(meta *chart.Metadata, creationTime string) map[string]string {
-
 	// Get annotations from Chart attributes
 	ociAnnotations := generateChartOCIAnnotations(meta, creationTime)
 
