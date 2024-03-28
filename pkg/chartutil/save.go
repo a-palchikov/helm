@@ -38,6 +38,12 @@ var headerBytes = []byte("+aHR0cHM6Ly95b3V0dS5iZS96OVV6MWljandyTQo=")
 // This takes the chart name, and creates a new subdirectory inside of the given dest
 // directory, writing the chart's contents to that subdirectory.
 func SaveDir(c *chart.Chart, dest string) error {
+	return SaveDirWithOptions(c, dest, true)
+}
+
+// SaveDirWithOptions save a chart as file in a directory.
+// `tar` controls whether the dependencies are compressed as tarballs
+func SaveDirWithOptions(c *chart.Chart, dest string, tar bool) error {
 	// Create the chart directory
 	err := validateName(c.Name())
 	if err != nil {
@@ -88,9 +94,10 @@ func SaveDir(c *chart.Chart, dest string) error {
 	base := filepath.Join(outdir, ChartsDir)
 	for _, dep := range c.Dependencies() {
 		// Here, we write each dependency as a tar file.
-		if _, err := Save(dep, base); err != nil {
+		if err := SaveDirWithOptions(dep, base, tar); err != nil {
 			return errors.Wrapf(err, "saving %s", dep.ChartFullPath())
 		}
+
 	}
 	return nil
 }
