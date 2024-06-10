@@ -89,7 +89,6 @@ func newUpgradeCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 		Use:   "upgrade [RELEASE] [CHART]",
 		Short: "upgrade a release",
 		Long:  upgradeDesc,
-		Args:  require.ExactArgs(2),
 		ValidArgsFunction: func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			if len(args) == 0 {
 				return compListReleases(toComplete, args, cfg)
@@ -100,6 +99,10 @@ func newUpgradeCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 			return noMoreArgsComp()
 		},
 		RunE: func(_ *cobra.Command, args []string) error {
+			if len(args) != 2 {
+				return fmt.Errorf(`"helm upgrade" requires exactly 2 arguments but %d were provided: %q`, len(args), args)
+			}
+
 			client.Namespace = settings.Namespace()
 
 			// FIXME(dima): client: user/pass/plainHTTP

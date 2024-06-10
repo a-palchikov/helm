@@ -77,8 +77,8 @@ all: build
 .PHONY: build
 build: $(BINDIR)/$(BINNAME)
 
-$(BINDIR)/$(BINNAME): $(SRC)
-	CGO_ENABLED=$(CGO_ENABLED) go build $(GOFLAGS) -trimpath -tags '$(TAGS)' -ldflags '$(LDFLAGS)' -o '$(BINDIR)'/$(BINNAME) ./cmd/helm
+$(BINDIR)/$(BINNAME): .FORCE
+	GO111MODULE=on CGO_ENABLED=$(CGO_ENABLED) go build $(GOFLAGS) -trimpath -tags '$(TAGS)' -ldflags '$(LDFLAGS)' -o '$(BINDIR)'/$(BINNAME) ./cmd/helm
 
 build-binary:
 	GO111MODULE=on CGO_ENABLED=$(CGO_ENABLED) go build $(GOFLAGS) -trimpath -tags '$(TAGS)' -ldflags '$(LDFLAGS)' -o '$(BINDIR)'/$(BINNAME) ./cmd/helm
@@ -249,3 +249,5 @@ info:
 	 @echo "Git Tag:           ${GIT_TAG}"
 	 @echo "Git Commit:        ${GIT_COMMIT}"
 	 @echo "Git Tree State:    ${GIT_DIRTY}"
+
+.FORCE:
