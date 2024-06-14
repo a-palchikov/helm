@@ -68,7 +68,7 @@ func NewPackage() *Package {
 func (p *Package) Run(path string, vals map[string]interface{}) (string, error) {
 	ch, err := loader.LoadDir(path)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("loading directory at %s: %w", path, err)
 	}
 
 	// If version is set, modify the version.
@@ -77,7 +77,7 @@ func (p *Package) Run(path string, vals map[string]interface{}) (string, error) 
 	}
 
 	if err := validateVersion(ch.Metadata.Version); err != nil {
-		return "", err
+		return "", fmt.Errorf("validating version: %w", err)
 	}
 
 	if p.AppVersion != "" {
@@ -86,7 +86,7 @@ func (p *Package) Run(path string, vals map[string]interface{}) (string, error) 
 
 	if reqs := ch.Metadata.Dependencies; reqs != nil {
 		if err := CheckDependencies(ch, reqs); err != nil {
-			return "", err
+			return "", fmt.Errorf("validating dependencies: %w", err)
 		}
 	}
 
@@ -95,7 +95,7 @@ func (p *Package) Run(path string, vals map[string]interface{}) (string, error) 
 		// Save to the current working directory.
 		dest, err = os.Getwd()
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("detecting working directory: %w", err)
 		}
 	} else {
 		// Otherwise save to set destination
@@ -107,26 +107,27 @@ func (p *Package) Run(path string, vals map[string]interface{}) (string, error) 
 
 	src := &kyaml.Node{}
 	if err := src.Encode(vals); err != nil {
-		return "", err
+		return "", fmt.Errorf("encoding values: %w", err)
 	}
 
 	for _, f := range ch.Raw {
 		// Always run to ensure that the values.yaml file is formatted.
-		if f.Name == chartutil.ValuesfileName {
+		if f.Name == chartutil.ValuesfileName && len(f.Data) != 0 {
 			dest, err := kyaml.Parse(string(f.Data))
 			if err != nil {
-				return "", err
+				fmt.Printf("Invalid YAML at %s:\n%s\n", f.Name, string(f.Data))
+				return "", fmt.Errorf("parsing YAML: %w", err)
 			}
 
 			// In the case of saving yaml comments, merges fields from src into dest.
 			rnode, err := merge2.Merge(kyaml.NewRNode(src), dest, kyaml.MergeOptions{})
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("merging values: %w", err)
 			}
 
 			data, err := rnode.String()
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("converting rnode to text: %w", err)
 			}
 			f.Data = []byte(data)
 
@@ -137,7 +138,7 @@ func (p *Package) Run(path string, vals map[string]interface{}) (string, error) 
 	if needUpdate {
 		data, err := kyaml.Marshal(src)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("serializing as YAML: %w", err)
 		}
 
 		ch.Raw = append(ch.Raw, &chart.File{
@@ -148,7 +149,7 @@ func (p *Package) Run(path string, vals map[string]interface{}) (string, error) 
 
 	name, err := chartutil.Save(ch, dest)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to save")
+		return "", fmt.Errorf("saving as %s: %w", dest, err)
 	}
 
 	if p.Sign {
