@@ -437,8 +437,8 @@ func (c *Client) Pull(ref string, options ...PullOption) (*PullResult, error) {
 
 	numDescriptors := len(descriptors)
 	if numDescriptors < minNumDescriptors {
-		return nil, fmt.Errorf("manifest does not contain minimum number of descriptors (%d), descriptors found: %d",
-			minNumDescriptors, numDescriptors)
+		return nil, fmt.Errorf("manifest does not contain minimum number of descriptors (%d), descriptors found: %d pulling %q",
+			minNumDescriptors, numDescriptors, ref)
 	}
 	var configDescriptor *ocispec.Descriptor
 	var chartDescriptor *ocispec.Descriptor

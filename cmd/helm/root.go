@@ -89,6 +89,7 @@ By default, the default directories depend on the Operating System. The defaults
 `
 
 func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string) (*cobra.Command, error) {
+	var quiet bool
 	cmd := &cobra.Command{
 		Use:          "helm",
 		Short:        "The Helm package manager for Kubernetes.",
@@ -96,6 +97,7 @@ func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 		SilenceUsage: true,
 	}
 	flags := cmd.PersistentFlags()
+	flags.BoolVar(&quiet, "quiet", false, "Silence output of commands")
 
 	settings.AddFlags(flags)
 	addKlogFlags(flags)
@@ -153,6 +155,10 @@ func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 	// execution.
 	flags.ParseErrorsWhitelist.UnknownFlags = true
 	flags.Parse(args)
+
+	if quiet {
+		out = io.Discard
+	}
 
 	var opts []registry.ClientOption
 	if settings.PlainHTTP {
