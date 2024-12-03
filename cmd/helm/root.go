@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"strings"
 
@@ -29,9 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"helm.sh/helm/v4/internal/tlsutil"
 	"helm.sh/helm/v4/pkg/action"
-	"helm.sh/helm/v4/pkg/registry"
 	"helm.sh/helm/v4/pkg/repo"
 )
 
@@ -160,16 +157,13 @@ func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 		out = io.Discard
 	}
 
-	var opts []registry.ClientOption
-	if settings.PlainHTTP {
-		opts = append(opts, registry.ClientOptPlainHTTP)
-	}
-
-	registryClient, err := newDefaultRegistryClient(opts...)
+	actionConfig.RegistryConfig.Debug = settings.Debug
+	actionConfig.RegistryConfig.PlainHTTP = settings.PlainHTTP
+	actionConfig.RegistryConfig.ConfigFile = settings.RegistryConfig
+	actionConfig.RegistryClient, err = actionConfig.RegistryConfig.NewClient()
 	if err != nil {
 		return nil, err
 	}
-	actionConfig.RegistryClient = registryClient
 
 	// Add subcommands
 	cmd.AddCommand(
@@ -264,68 +258,4 @@ func checkForExpiredRepos(repofile string) {
 		}
 	}
 
-}
-
-// FIXME(dima)
-/*
-func newRegistryClient(certFile, keyFile, caFile string, insecureSkipTLSverify, plainHTTP bool) (*registry.Client, error) {
-	if certFile != "" && keyFile != "" || caFile != "" || insecureSkipTLSverify {
-		registryClient, err := newRegistryClientWithTLS(certFile, keyFile, caFile, insecureSkipTLSverify, username, password)
-		if err != nil {
-			return nil, err
-		}
-		return registryClient, nil
-	}
-	var opts []registry.ClientOption
-	if plainHTTP {
-		opts = append(opts, registry.ClientOptPlainHTTP)
-	}
-	registryClient, err := newDefaultRegistryClient(opts...)
-	if err != nil {
-		return nil, err
-	}
-	return registryClient, nil
-}
-*/
-
-func newDefaultRegistryClient(opts ...registry.ClientOption) (*registry.Client, error) {
-	opts = append([]registry.ClientOption{
-		registry.ClientOptDebug(settings.Debug),
-		registry.ClientOptEnableCache(true),
-		registry.ClientOptWriter(os.Stderr),
-		registry.ClientOptCredentialsFile(settings.RegistryConfig),
-	}, opts...)
-	// Create a new registry client
-	registryClient, err := registry.NewClient(opts...)
-	if err != nil {
-		return nil, err
-	}
-	return registryClient, nil
-}
-
-func newRegistryClientWithTLS(
-	certFile, keyFile, caFile string, insecureSkipTLSverify bool, username, password string,
-) (*registry.Client, error) {
-	tlsConf, err := tlsutil.NewClientTLS(certFile, keyFile, caFile, insecureSkipTLSverify)
-	if err != nil {
-		return nil, fmt.Errorf("can't create TLS config for client: %w", err)
-	}
-
-	// Create a new registry client
-	registryClient, err := registry.NewClient(
-		registry.ClientOptDebug(settings.Debug),
-		registry.ClientOptEnableCache(true),
-		registry.ClientOptWriter(os.Stderr),
-		registry.ClientOptCredentialsFile(settings.RegistryConfig),
-		registry.ClientOptHTTPClient(&http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConf,
-			},
-		}),
-		registry.ClientOptBasicAuth(username, password),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return registryClient, nil
 }

@@ -250,14 +250,9 @@ func ClientOptHTTPClient(httpClient *http.Client) ClientOption {
 	}
 }
 
+// ClientOptPlainHTTP configures the registry client to use plain HTTP
 func ClientOptPlainHTTP(c *Client) {
 	c.plainHTTP = true
-}
-
-func ClientOptPlainHTTP() ClientOption {
-	return func(c *Client) {
-		c.plainHTTP = true
-	}
 }
 
 // ClientOptResolver returns a function that sets the resolver setting on a client options set

@@ -147,7 +147,7 @@ func (g *OCIGetter) newRegistryClient() (*registry.Client, error) {
 		Timeout:   g.opts.timeout,
 	})}
 	if g.opts.plainHTTP {
-		opts = append(opts, registry.ClientOptPlainHTTP())
+		opts = append(opts, registry.ClientOptPlainHTTP)
 	}
 
 	client, err := registry.NewClient(opts...)

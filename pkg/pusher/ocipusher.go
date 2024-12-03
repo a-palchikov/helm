@@ -146,7 +146,7 @@ func (pusher *OCIPusher) newRegistryClient() (*registry.Client, error) {
 
 	opts := []registry.ClientOption{registry.ClientOptEnableCache(true)}
 	if pusher.opts.plainHTTP {
-		opts = append(opts, registry.ClientOptPlainHTTP())
+		opts = append(opts, registry.ClientOptPlainHTTP)
 	}
 
 	registryClient, err := registry.NewClient(opts...)

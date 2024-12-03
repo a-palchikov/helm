@@ -19,6 +19,7 @@ package action
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"helm.sh/helm/v4/internal/tlsutil"
 	"helm.sh/helm/v4/pkg/chart"
 	"helm.sh/helm/v4/pkg/chartutil"
 	"helm.sh/helm/v4/pkg/engine"
@@ -90,11 +92,59 @@ type Configuration struct {
 
 	// RegistryClient is a client for working with registries
 	RegistryClient *registry.Client
+	RegistryConfig RegistryConfiguration
 
 	// Capabilities describes the capabilities of the Kubernetes cluster.
 	Capabilities *chartutil.Capabilities
 
 	Log func(string, ...interface{})
+}
+
+// NewClient creates a new registry client based on the configuration
+func (r *RegistryConfiguration) NewClient() (*registry.Client, error) {
+	var opts = []registry.ClientOption{
+		registry.ClientOptDebug(r.Debug),
+		registry.ClientOptEnableCache(true),
+		registry.ClientOptWriter(os.Stderr),
+		registry.ClientOptCredentialsFile(r.ConfigFile),
+	}
+	if !r.isTLS() {
+		return registry.NewClient(opts...)
+	}
+	tlsConf, err := tlsutil.NewClientTLS(r.CertFile, r.KeyFile, r.CaFile, r.InsecureSkipTLSverify)
+	if err != nil {
+		return nil, fmt.Errorf("creating TLS config for client: %w", err)
+	}
+	opts = append(opts,
+		registry.ClientOptHTTPClient(&http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: tlsConf,
+			},
+		}),
+		registry.ClientOptBasicAuth(r.Username, r.Password),
+	)
+	registryClient, err := registry.NewClient(opts...)
+	if err != nil {
+		return nil, err
+	}
+	return registryClient, nil
+}
+
+// RegistryConfiguration defines the configuration of a registry client
+type RegistryConfiguration struct {
+	Debug                 bool
+	PlainHTTP             bool
+	Username              string
+	Password              string
+	CertFile              string
+	KeyFile               string
+	CaFile                string
+	InsecureSkipTLSverify bool
+	ConfigFile            string
+}
+
+func (r *RegistryConfiguration) isTLS() bool {
+	return r.CaFile != "" && r.CertFile != "" && r.KeyFile != ""
 }
 
 // renderResources renders the templates in a chart

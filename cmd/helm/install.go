@@ -140,13 +140,11 @@ func newInstallCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 			return compInstall(args, toComplete, client)
 		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			if client.IsTLS() {
-				registryClient, err := newRegistryClientWithTLS(client.CertFile, client.KeyFile, client.CaFile, client.InsecureSkipTLSverify)
-				if err != nil {
-					return fmt.Errorf("missing registry client: %w", err)
-				}
-				client.SetRegistryClient(registryClient)
+			registryClient, err := client.RegistryConfiguration.NewClient()
+			if err != nil {
+				return fmt.Errorf("missing registry client: %w", err)
 			}
+			client.SetRegistryClient(registryClient)
 
 			// This is for the case where "" is specifically passed in as a
 			// value. When there is no value passed in NoOptDefVal will be used

@@ -35,17 +35,7 @@ it will also be uploaded.
 `
 
 type registryPushOptions struct {
-	certFile              string
-	keyFile               string
-	caFile                string
-	insecureSkipTLSverify bool
-	plainHTTP             bool
-	password              string
-	username              string
-}
-
-func (r *registryPushOptions) isTLS() bool {
-	return r.certFile != "" && r.keyFile != "" || r.caFile != "" || r.insecureSkipTLSverify
+	cfg action.RegistryConfiguration
 }
 
 func newPushCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
@@ -74,21 +64,18 @@ func newPushCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 			return noMoreArgsComp()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// FIXME(dima): plainHTTP
-			if o.isTLS() {
-				registryClient, err := newRegistryClientWithTLS(o.certFile, o.keyFile, o.caFile, o.insecureSkipTLSverify, o.username, o.password,)
-				if err != nil {
-					return fmt.Errorf("missing registry client: %w", err)
-				}
-				cfg.RegistryClient = registryClient
+			registryClient, err := o.cfg.NewClient()
+			if err != nil {
+				return fmt.Errorf("missing registry client: %w", err)
 			}
+			cfg.RegistryClient = registryClient
 			chartRef := args[0]
 			remote := args[1]
 			client := action.NewPushWithOpts(
 				action.WithPushConfig(cfg),
-				action.WithTLSClientConfig(o.certFile, o.keyFile, o.caFile),
-				action.WithInsecureSkipTLSVerify(o.insecureSkipTLSverify),
-				action.WithPlainHTTP(o.plainHTTP),
+				action.WithTLSClientConfig(o.cfg.CertFile, o.cfg.KeyFile, o.cfg.CaFile),
+				action.WithInsecureSkipTLSVerify(o.cfg.InsecureSkipTLSverify),
+				action.WithPlainHTTP(o.cfg.PlainHTTP),
 				action.WithPushOptWriter(out),
 			)
 			client.Settings = settings
@@ -102,13 +89,13 @@ func newPushCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&o.certFile, "cert-file", "", "identify registry client using this SSL certificate file")
-	f.StringVar(&o.keyFile, "key-file", "", "identify registry client using this SSL key file")
-	f.StringVar(&o.caFile, "ca-file", "", "verify certificates of HTTPS-enabled servers using this CA bundle")
-	f.BoolVar(&o.insecureSkipTLSverify, "insecure-skip-tls-verify", false, "skip tls certificate checks for the chart upload")
-	f.BoolVar(&o.plainHTTP, "plain-http", false, "use insecure HTTP connections for the chart upload")
-	f.StringVar(&o.username, "username", "", "chart repository username where to locate the requested chart")
-	f.StringVar(&o.password, "password", "", "chart repository password where to locate the requested chart")
+	f.StringVar(&o.cfg.CertFile, "cert-file", "", "identify registry client using this SSL certificate file")
+	f.StringVar(&o.cfg.KeyFile, "key-file", "", "identify registry client using this SSL key file")
+	f.StringVar(&o.cfg.CaFile, "ca-file", "", "verify certificates of HTTPS-enabled servers using this CA bundle")
+	f.BoolVar(&o.cfg.InsecureSkipTLSverify, "insecure-skip-tls-verify", false, "skip tls certificate checks for the chart upload")
+	f.BoolVar(&o.cfg.PlainHTTP, "plain-http", false, "use insecure HTTP connections for the chart upload")
+	f.StringVar(&o.cfg.Username, "username", "", "chart repository username where to locate the requested chart")
+	f.StringVar(&o.cfg.Password, "password", "", "chart repository password where to locate the requested chart")
 
 	return cmd
 }

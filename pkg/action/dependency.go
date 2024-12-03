@@ -34,17 +34,16 @@ import (
 //
 // It provides the implementation of 'helm dependency' and its respective subcommands.
 type Dependency struct {
-	Verify                bool
-	Keyring               string
-	SkipRefresh           bool
-	ColumnWidth           uint
-	Username              string
-	Password              string
-	CertFile              string
-	KeyFile               string
-	CaFile                string
-	InsecureSkipTLSverify bool
-	PlainHTTP             bool
+	RegistryConfiguration
+
+	Verify      bool
+	Keyring     string
+	SkipRefresh bool
+	ColumnWidth uint
+}
+
+func (d *Dependency) IsTLS() bool {
+	return d.CertFile != "" && d.KeyFile != "" && d.CaFile != ""
 }
 
 // NewDependency creates a new Dependency object with the given configuration.

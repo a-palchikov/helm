@@ -41,7 +41,7 @@ If no lock file is found, 'helm dependency build' will mirror the behavior
 of 'helm dependency update'.
 `
 
-func newDependencyBuildCmd(out io.Writer) *cobra.Command {
+func newDependencyBuildCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 	client := action.NewDependency()
 
 	cmd := &cobra.Command{
@@ -54,12 +54,10 @@ func newDependencyBuildCmd(out io.Writer) *cobra.Command {
 			if len(args) > 0 {
 				chartpath = filepath.Clean(args[0])
 			}
-			registryClient, err := newRegistryClient(client.CertFile, client.KeyFile, client.CaFile,
-				client.InsecureSkipTLSverify, client.PlainHTTP, client.Username, client.Password)
+			registryClient, err := client.RegistryConfiguration.NewClient()
 			if err != nil {
 				return fmt.Errorf("missing registry client: %w", err)
 			}
-
 			man := &downloader.Manager{
 				Out:              out,
 				ChartPath:        chartpath,

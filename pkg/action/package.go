@@ -39,6 +39,8 @@ import (
 //
 // It provides the implementation of 'helm package'.
 type Package struct {
+	RegistryConfiguration
+
 	Sign             bool
 	Key              string
 	Keyring          string
@@ -48,15 +50,8 @@ type Package struct {
 	Destination      string
 	DependencyUpdate bool
 
-	RepositoryConfig      string
-	RepositoryCache       string
-	PlainHTTP             bool
-	Username              string
-	Password              string
-	CertFile              string
-	KeyFile               string
-	CaFile                string
-	InsecureSkipTLSverify bool
+	RepositoryConfig string
+	RepositoryCache  string
 }
 
 // NewPackage creates a new Package object with the given configuration.

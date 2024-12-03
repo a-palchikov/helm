@@ -75,7 +75,7 @@ type Install struct {
 	DryRun          bool
 	DryRunOption    string
 	// Custom version of the chart to render
-	Version                  string
+	Version string
 	// HideSecret can be set to true when DryRun is enabled in order to hide
 	// Kubernetes Secrets in the output. It cannot be used outside of DryRun.
 	HideSecret               bool
@@ -121,27 +121,17 @@ type Install struct {
 
 // ChartPathOptions captures common options used for controlling chart paths
 type ChartPathOptions struct {
-	CaFile                string // --ca-file
-	CertFile              string // --cert-file
-	KeyFile               string // --key-file
-	InsecureSkipTLSverify bool   // --insecure-skip-verify
-	PlainHTTP             bool   // --plain-http
-	Keyring               string // --keyring
-	Password              string // --password
-	PassCredentialsAll    bool   // --pass-credentials
-	RepoURL               string // --repo
-	Username              string // --username
-	Verify                bool   // --verify
-	Version               string // --version
+	RegistryConfiguration
+
+	Keyring            string // --keyring
+	PassCredentialsAll bool   // --pass-credentials
+	RepoURL            string // --repo
+	Verify             bool   // --verify
+	Version            string // --version
 
 	// registryClient provides a registry client but is not added with
 	// options from a flag
 	registryClient *registry.Client
-}
-
-// IsTLS determines if the options describe a valid TLS configuration
-func (r *ChartPathOptions) IsTLS() bool {
-	return r.CertFile != "" && r.KeyFile != "" || r.CaFile != "" || r.InsecureSkipTLSverify
 }
 
 // NewInstall creates a new Install object with the given configuration.
