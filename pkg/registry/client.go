@@ -80,8 +80,6 @@ type (
 		credentialsStore   credentials.Store
 		httpClient         *http.Client
 		plainHTTP          bool
-		// resolverOptions optionally specifies additional resolver options
-		resolverOptions []auth.ResolverOption
 		err                error // pass any errors from the ClientOption functions
 	}
 
@@ -227,6 +225,7 @@ func ClientOptHTTPClient(httpClient *http.Client) ClientOption {
 	}
 }
 
+// ClientOptPlainHTTP configures the registry client to use plain HTTP
 func ClientOptPlainHTTP(c *Client) {
 	c.plainHTTP = true
 }
