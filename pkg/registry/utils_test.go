@@ -111,7 +111,7 @@ func setup(suite *TestSuite, tlsEnabled, insecure bool) *registry.Registry {
 		suite.Nil(err, "no error loading tls config")
 		opts = append(opts, ClientOptHTTPClient(httpClient))
 	} else {
-		opts = append(opts, ClientOptPlainHTTP())
+		opts = append(opts, ClientOptPlainHTTP)
 	}
 
 	suite.RegistryClient, err = NewClient(opts...)

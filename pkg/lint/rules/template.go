@@ -45,7 +45,7 @@ var (
 )
 
 // Templates lints the templates in the Linter.
-func Templates(linter *support.Linter, values map[string]interface{}, namespace string, _ bool) {
+func Templates(linter *support.Linter, values map[string]interface{}, namespace string) {
 	TemplatesWithKubeVersion(linter, values, namespace, nil)
 }
 

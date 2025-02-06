@@ -39,7 +39,7 @@ type registryPushOptions struct {
 }
 
 func newPushCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
-	o := &registryPushOptions{}
+	o := &registryPushOptions{cfg: cfg.RegistryConfig}
 
 	cmd := &cobra.Command{
 		Use:   "push [chart] [remote]",
@@ -64,6 +64,10 @@ func newPushCmd(cfg *action.Configuration, out io.Writer) *cobra.Command {
 			return noMoreArgsComp()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if !cmd.Flags().Changed("plain-http") && cfg.RegistryConfig.PlainHTTP {
+				// Override with configuration from environment
+				o.cfg.PlainHTTP = true
+			}
 			registryClient, err := o.cfg.NewClient()
 			if err != nil {
 				return fmt.Errorf("missing registry client: %w", err)

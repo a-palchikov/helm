@@ -108,10 +108,14 @@ func (r *RegistryConfiguration) NewClient() (*registry.Client, error) {
 		registry.ClientOptWriter(os.Stderr),
 		registry.ClientOptCredentialsFile(r.ConfigFile),
 	}
+	if r.PlainHTTP {
+		opts = append(opts, registry.ClientOptPlainHTTP)
+	}
 	if !r.isTLS() {
 		return registry.NewClient(opts...)
 	}
-	tlsConf, err := tlsutil.NewClientTLS(r.CertFile, r.KeyFile, r.CaFile, r.InsecureSkipTLSverify)
+	tlsConf, err := tlsutil.NewTLSConfig(tlsutil.WithCAFile(r.CaFile),
+		tlsutil.WithCertKeyPairFiles(r.CertFile, r.KeyFile), tlsutil.WithInsecureSkipVerify(r.InsecureSkipTLSverify))
 	if err != nil {
 		return nil, fmt.Errorf("creating TLS config for client: %w", err)
 	}

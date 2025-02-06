@@ -101,7 +101,7 @@ var indexfileEntries = map[string]repo.ChartVersions{
 	},
 }
 
-func loadTestIndex(_ *testing.T, all bool) *Index {
+func loadTestIndex(all bool) *Index {
 	i := NewIndex()
 	i.AddRepo("testing", &repo.IndexFile{Entries: indexfileEntries}, all)
 	i.AddRepo("ztesting", &repo.IndexFile{Entries: map[string]repo.ChartVersions{
@@ -149,7 +149,6 @@ func TestAddRepo_Sort(t *testing.T) {
 }
 
 func TestSearchByName(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		query   string

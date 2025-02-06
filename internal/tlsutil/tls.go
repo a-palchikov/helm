@@ -36,7 +36,6 @@ type TLSConfigOption func(options *TLSConfigOptions) error
 func WithInsecureSkipVerify(insecureSkipTLSverify bool) TLSConfigOption {
 	return func(options *TLSConfigOptions) error {
 		options.insecureSkipTLSverify = insecureSkipTLSverify
-
 		return nil
 	}
 }
